@@ -1,0 +1,26 @@
+# Database (may contain scan data / schedule & alert credentials — keep out of git)
+vulnscan.db
+vulnscan.db-wal
+vulnscan.db-shm
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Logs & runtime
+*.log
+server.log
+
+# Secrets / local env
+.env
+.env.*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

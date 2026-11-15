@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VulnScan — Authorized Vulnerability Scanner</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="brand">🛡️ VulnScan</div>
+    <div class="headright">
+      <button id="open-alerts" class="btn-ghost">🔔 Alerts</button>
+      <span class="tools" id="tools">checking tools…</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel new-scan">
+      <h2>New scan</h2>
+      <label>Target
+        <input id="target" placeholder="example.com or https://example.com/app" autocomplete="off">
+      </label>
+
+      <div class="row">
+        <label>Authorized by
+          <input id="authby" placeholder="your name / engagement ID">
+        </label>
+        <label>Max pages to crawl
+          <input id="maxpages" type="number" value="40" min="1" max="500">
+        </label>
+      </div>
+
+      <details class="opts">
+        <summary>Scan options</summary>
+        <div class="checks">
+          <label class="ck"><input type="checkbox" id="active" checked> Active injection tests (XSS/SQLi/redirect)</label>
+          <label class="ck"><input type="checkbox" id="sens" checked> Probe for exposed sensitive files</label>
+          <label class="ck"><input type="checkbox" id="nuclei" checked> Use nuclei (if installed)</label>
+          <label class="ck"><input type="checkbox" id="nmap" checked> Use nmap (if installed)</label>
+          <label class="ck"><input type="checkbox" id="private"> Allow internal/private targets</label>
+          <label class="ck"><input type="checkbox" id="subenum"> Subdomain enumeration (DNS)</label>
+        </div>
+        <label>SSRF callback host (optional — your OAST/collaborator for blind SSRF)
+          <input id="ssrfcb" placeholder="abc.oast.site or your webhook host">
+        </label>
+        <div class="row">
+          <label>Concurrency
+            <input id="concurrency" type="number" value="6" min="1" max="20">
+          </label>
+          <label>Delay between requests (s)
+            <input id="delay" type="number" value="0" min="0" step="0.1">
+          </label>
+        </div>
+
+        <div class="authsec">
+          <label>Authentication
+            <select id="authtype">
+              <option value="none">None (unauthenticated)</option>
+              <option value="header">Header / Bearer token</option>
+              <option value="cookie">Session cookie</option>
+              <option value="form">Form login</option>
+            </select>
+          </label>
+
+          <div id="auth-header" class="authfields hidden">
+            <div class="row">
+              <label>Header name<input id="a-hname" value="Authorization"></label>
+              <label>Header value<input id="a-hval" placeholder="Bearer eyJ..."></label>
+            </div>
+          </div>
+
+          <div id="auth-cookie" class="authfields hidden">
+            <label>Cookie string<input id="a-cookie" placeholder="session=abc123; csrf=xyz"></label>
+          </div>
+
+          <div id="auth-form" class="authfields hidden">
+            <label>Login URL<input id="a-login" placeholder="https://target/login"></label>
+            <div class="row">
+              <label>Username field<input id="a-ufield" value="username"></label>
+              <label>Username<input id="a-user" placeholder="user"></label>
+            </div>
+            <div class="row">
+              <label>Password field<input id="a-pfield" value="password"></label>
+              <label>Password<input id="a-pass" type="password" placeholder="••••••"></label>
+            </div>
+            <label>Logged-in indicator (text shown only when authenticated)
+              <input id="a-indicator" placeholder="Logout, Dashboard, Welcome…"></label>
+          </div>
+          <p class="authnote hidden" id="authnote">🔒 Credentials are used for this scan
+            only and are never written to disk.</p>
+        </div>
+      </details>
+
+      <label>Repeat
+        <select id="repeat">
+          <option value="0">Once (run now)</option>
+          <option value="60">Every hour</option>
+          <option value="1440">Every day</option>
+          <option value="10080">Every week</option>
+        </select>
+      </label>
+
+      <label class="authorize">
+        <input type="checkbox" id="authorized">
+        <span><b>I am authorized to test this target.</b> I have written permission
+        to perform security testing against it. Scanning systems without authorization
+        is illegal.</span>
+      </label>
+
+      <button id="launch" disabled>Launch scan</button>
+      <div class="err" id="err"></div>
+    </section>
+
+    <section class="panel scans">
+      <h2>Scans</h2>
+      <div id="scanlist" class="scanlist"><p class="muted">No scans yet.</p></div>
+
+      <h2 style="margin-top:22px">Schedules</h2>
+      <div id="schedlist" class="scanlist"><p class="muted">No schedules.</p></div>
+    </section>
+  </main>
+
+  <div id="alerts" class="detail hidden">
+    <div class="detail-card" style="max-width:520px">
+      <div class="detail-head">
+        <h2>🔔 New-finding alerts</h2>
+        <button id="alerts-close" class="btn-ghost">✕</button>
+      </div>
+      <div style="padding:18px 20px;overflow:auto">
+        <label class="ck"><input type="checkbox" id="al-enabled"> Enable alerts on scheduled runs</label>
+        <label>Alert when a new finding is at or above
+          <select id="al-sev">
+            <option value="critical">Critical</option>
+            <option value="high" selected>High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+            <option value="info">Info (any)</option>
+          </select>
+        </label>
+
+        <h3 class="subh">Webhook (Slack / Discord / generic)</h3>
+        <label>Webhook URL
+          <input id="al-webhook" placeholder="https://hooks.slack.com/services/…">
+        </label>
+
+        <h3 class="subh">Email (SMTP)</h3>
+        <label class="ck"><input type="checkbox" id="al-email-on"> Enable email</label>
+        <div class="row">
+          <label>SMTP host<input id="al-host" placeholder="smtp.example.com"></label>
+          <label>Port<input id="al-port" type="number" value="587"></label>
+        </div>
+        <div class="row">
+          <label>Username<input id="al-user" placeholder="user@example.com"></label>
+          <label>Password<input id="al-pass" type="password" placeholder="••••••"></label>
+        </div>
+        <div class="row">
+          <label>From<input id="al-from" placeholder="alerts@example.com"></label>
+          <label>To<input id="al-to" placeholder="you@example.com"></label>
+        </div>
+        <label class="ck"><input type="checkbox" id="al-tls" checked> Use STARTTLS</label>
+
+        <p class="authnote" id="al-note">🔒 Webhook URL and SMTP password are stored to send
+          unattended alerts. Treat the database as sensitive.</p>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button id="al-save">Save</button>
+          <button id="al-test" class="btn-ghost" style="width:auto">Send test</button>
+        </div>
+        <div class="err" id="al-msg"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="detail" class="detail hidden">
+    <div class="detail-card">
+      <div class="detail-head">
+        <h2 id="d-title">Scan</h2>
+        <div>
+          <a id="d-html" target="_blank" class="btn-ghost">HTML report</a>
+          <a id="d-json" target="_blank" class="btn-ghost">JSON</a>
+          <button id="d-close" class="btn-ghost">✕</button>
+        </div>
+      </div>
+      <div id="d-status" class="d-status"></div>
+      <div class="progress"><div id="d-bar" class="bar"></div></div>
+      <div class="summary" id="d-summary"></div>
+      <div id="d-diff" class="diff hidden"></div>
+      <div class="cols">
+        <div class="findings" id="d-findings"></div>
+        <div class="logs" id="d-logs"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
